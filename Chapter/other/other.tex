@@ -1,0 +1,149 @@
+\section{其他}
+
+\subsection{整数区间二分}
+
+整数区间 $[L, R)$ 满足单调性：{\tt NNNYYYY} 或 {\tt YYYYNNN}，
+其中 {\tt Y} 表示成功，{\tt N} 表示失败．
+
+获取 {\tt NNNYYYY} 的第一个 {\tt Y}：判断 $[L, M)$ 的最后一个元素是否为 {\tt Y}．
+
+\lstinputlisting[caption={binary-search-first.cpp},label={binary-search-first},language=C++]{Chapter/other/code/binary-search-first.cpp}
+
+获取 {\tt YYYYNNN} 的最后一个 {\tt Y}：判断 $[M, R)$ 的第一个元素是否为 {\tt Y}．
+
+\lstinputlisting[caption={binary-search-last.cpp},label={binary-search-last},language=C++]{Chapter/other/code/binary-search-last.cpp}
+
+\subsection{单峰离散函数最值区间}
+
+可以使用二分来获取形如 {\tt abdEEEEca} 单峰函数的最值区间，前提是这个单峰函数满足：
+
+\begin{enumerate}[noitemsep]
+    \item 所有最值点构成整数区间 $[l_{\mathrm m}, r_{\mathrm m})$；
+    \item 函数在 $[L, l_{\mathrm m} + 1)$ 和 $[r_{\mathrm m} - 1, R)$ 上严格单调且调性相反．
+\end{enumerate}
+
+以最大值（{\tt a<b< < = = = > >}，在 $[L + 1, R)$ 上二分搜索）为例：
+
+\lstinputlisting[caption={single-mount.cpp},label={single-mount},language=C++]{Chapter/other/code/single-mount.cpp}
+
+\subsection{{\tt std::lower\_bound / std::upper\_bound}}
+
+\begin{enumerate}[noitemsep]
+    \item {\tt bound} 就是区间端点，左闭右开；
+    \item {\tt std::lower\_bound} 支持 {\tt bool(item, value)}，返回第一个结果为假的 {\tt item} 索引；
+    \item {\tt std::upper\_bound} 支持 {\tt bool(value, item)}，返回第一个结果为真的 {\tt item} 索引．
+\end{enumerate}
+
+\lstinputlisting[caption={range-bound.cpp},label={range-bound},language=C++]{Chapter/other/code/range-bound.cpp}
+
+\subsection{{\tt std::partial\_sum / std::adjacent\_difference}}
+
+查询和修改左闭右开区间，先往前缀和数组头部添加幺元再求前缀和，先往原数组尾部添加幺元再求差分．
+
+\lstinputlisting[caption={sum-diff.cpp},label={sum-diff},language=C++]{Chapter/other/code/sum-diff.cpp}
+
+\subsection{{\tt std::next\_permutation / std::prev\_permutation}}
+
+实现的基本思路是：{\tt xxx 3 75421} 末尾的最长逆序段 {\tt 75421} 不存在下一个字典序，
+而 {\tt 3 75421} 存在下一个字典序，且首位必为逆序段大于 {\tt 3} 的最小值 {\tt 4}，
+这样便得到 {\tt 4 75321}，末尾 {\tt 75321} 保持逆序，逆回正序变得到最小字典序 {\tt 12357}，
+于是结果为 {\tt xxx 4 12357}．
+
+\begin{itemize}[noitemsep]
+    \item 时间复杂度最好为 $O(1)$（接近顺序），最坏为 $O(n)$（接近逆序）；
+    \item 当完全逆序时，{\tt std::next\_permutation} 将返回 {\tt false}，并变回正序．
+\end{itemize}
+
+\lstinputlisting[caption={permutation.cpp},label={permutation},language=C++]{Chapter/other/code/permutation.cpp}
+
+\subsection{自定义 Hash}
+
+需要自定义 {\tt hasher} 仿函数，以及重载 {\tt operator==}．
+
+使用 {\tt unordered} 类容器，如果需要防 Hack，常数会很大．
+
+如果有 {\tt libstdc++} 库，可以使用 {\tt \_\_gnu\_pbds::gp\_hash\_table}，
+
+用 {\tt find(x) != end()} 来代替 {\tt count()}，其他接口与之前相同．
+
+\lstinputlisting[caption={custom-hash.cpp},label={custom-hash},language=C++]{Chapter/other/code/custom-hash.cpp}
+
+\newpage
+
+\subsection{使用栈模拟递归}
+
+程序是一台状态机：
+
+\begin{itemize}[noitemsep]
+    \item 栈帧：PC + 函数参数 + 局部变量；
+    \item 状态：栈 + 全局变量；
+    \item 转移：语句．
+\end{itemize}
+
+我们可以维护一台状态机：
+
+\begin{enumerate}[noitemsep]
+    \item 以递归语句、返回语句为界，划分代码块；
+    \item 每个代码块被分配 PC 值；
+    \item 调用递归时，往栈压入栈帧；
+    \item 结束返回时，先把结果放在 {\tt rax} 中，然后弹栈．
+\end{enumerate}
+
+当然完全模拟栈帧来写会比较繁琐，实际根据递归的复杂程度进行一定的简化．
+
+\lstinputlisting[caption={stimulate-recursive.cpp},label={stimulate-recursive},language=C++]{Chapter/other/code/stimulate-recursive.cpp}
+
+\newpage
+
+\subsection{位运算操作}
+
+最高位：
+
+\begin{itemize}[noitemsep]
+    \item $\lfloor \log_2 x \rfloor$：{\tt 31 - \_\_builtin\_clz(x)}；
+    \item $\lceil \log_2 x \rceil$：{\tt 32 - \_\_builtin\_clz(x - 1)}；
+    \item 最高位 {\tt 1} 的位置：{\tt 31 - \_\_builtin\_clz(x)}．
+\end{itemize}
+
+最低位：
+
+\begin{itemize}[noitemsep]
+    \item 最低位 {\tt 1} 的位置：{\tt \_\_builtin\_ctz(x)}；
+    \item 清除最低位的 {\tt 1}：{\tt x \&= x - 1}；
+    \item 取最低位的 {\tt 1}：{\tt x \& -x}．
+\end{itemize}
+
+第 {\tt i} 位：
+
+\begin{itemize}[noitemsep]
+    \item 查看第 {\tt i} 位：{\tt x >> i \& 1}；
+    \item 第 {\tt i} 位置 {\tt 1}：{\tt x |= 1 << i}；
+    \item 第 {\tt i} 位置 {\tt 0}：{\tt x \&= \textasciitilde(1 << i)}；
+    \item 第 {\tt i} 位取反：{\tt x \textasciicircum= 1 << i}．
+\end{itemize}
+
+$2$ 的幂：
+
+\begin{itemize}[noitemsep]
+    \item 判断是否为 $2$ 的幂：{\tt x > 0 \&\& (x \& (x - 1) == 0)}；
+    \item 离 $x > 0$ 最近的 $2^k$：$2^{\lfloor \log_2 x \rfloor} \le x \le 2^{\lceil \log_2 x \rceil}$．
+\end{itemize}
+
+掩码：
+
+\begin{itemize}[noitemsep]
+    \item $[l, h)$：{\tt ((1 << h) - 1) \textasciicircum{} ((1 << l) - 1)}；
+    \item 偶数位：{\tt 0x55555555}；
+    \item 奇数位：{\tt 0xAAAAAAAA}．
+\end{itemize}
+
+其他：
+
+\begin{itemize}[noitemsep]
+    \item {\tt 1} 的个数：{\tt \_\_builtin\_popcount(x)}；
+    \item 原码转 Gray 码：{\tt g = x \textasciicircum {} (x >> 1)}；
+    \item Gray 码转原码：{\tt for (x = 0; g; g >>= 1) x \textasciicircum= g}；
+    \item 子集枚举：{\tt for (int sub = x; sub; sub = (sub - 1) \& x)}；
+    \item 含 $k$ 个 {\tt 1} 的 $n$ 位数枚举：
+    \lstinputlisting[caption={enum-k-1s.cpp},label={enum-k-1s},language=C++]{Chapter/other/code/enum-k-1s.cpp}
+\end{itemize}

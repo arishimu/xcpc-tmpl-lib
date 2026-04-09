@@ -1,0 +1,46 @@
+\section{串}
+
+\subsection{序列 Hash（随机 base，多 mod）}
+
+把整个序列的每个元素看成进制数的数位，序列开头的位权最大，结尾最小，便能得到序列的 Hash 值．
+
+预处理每个前缀的 Hash 值 $h(i)$，则子段 $h[l, r) = h(r) - h(l) \cdot \text{base}^{r - l}$．
+
+\begin{itemize}[noitemsep]
+    \item 进制随机生成，用户可以指定 $k$ 个模数，构造 {\tt hasher}；
+    \item {\tt hasher.hash(s.begin(), s.end())} 可以预处理序列的 Hash 值，返回代理对象 {\tt proxy}；
+    \item {\tt proxy.get(l, r)} 可以获取 {\tt s[l, r)} $k$ 个 Hash 值；
+    \item 这 $k$ 个 Hash 值使用 {\tt std::vector} 存储，它可以直接进行字典序比较．
+\end{itemize}
+
+\lstinputlisting[caption={seq-hash.cpp},label={seq-hash},language=C++]{Chapter/string/code/seq-hash.cpp}
+
+\subsection{Manacher}
+
+Manacher 可以获取 $s$ 每个字符为中心的最长回文子串，时间复杂度为 $O(n)$．
+
+使用 $s$ 字符集以外的 {\tt sep} 字符，插空后得到 $t$．
+比如 {\tt mississippi} 变成 {\tt \#m\#i\#s\#s\#i\#s\#s\#i\#p\#p\#i\#}，
+即 $s(i) \rightarrow t(2i + 1)$．
+{\tt manacher} 将返回 {\tt r} 数组，代表以 $t(i)$ 为中心的最长回文半径 $r$（含中心）．
+
+回文对应原串 $s\Big[\Big\lfloor\frac{i - r + 1}{2}\Big\rfloor, \Big\lfloor\frac{i + r - 1}{2}\Big\rfloor\Big)$，
+对应原串的回文长度为 $r - 1$．
+
+\lstinputlisting[caption={manacher.cpp},label={manacher},language=C++]{Chapter/string/code/manacher.cpp}
+
+\newpage
+
+\subsection{KMP}
+
+{\tt kmp} 获取每个前缀 $s[0, i)$ 的最长公共真前后缀的长度 $\pi(i)$，时间复杂度为 $O(n)$．
+
+\lstinputlisting[caption={kmp.cpp},label={kmp},language=C++]{Chapter/string/code/kmp.cpp}
+
+\subsection{Z 函数}
+
+{\tt zfunc} 获取每个后缀 $s[i, n)$ 与原串 $s$ 的最长公共前缀（LCP）的长度，时间复杂度为 $O(n)$．
+
+\lstinputlisting[caption={zfunc.cpp},label={zfunc},language=C++]{Chapter/string/code/zfunc.cpp}
+
+\newpage

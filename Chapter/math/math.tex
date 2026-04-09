@@ -1,0 +1,374 @@
+﻿\section{数学}
+
+\subsection{快速幂、自动取模}
+
+对于 $0 < P < \mathtt{INT32\_MAX} / 2$，
+{\tt Z}始终维护一个范围在 $[0, P)$ 的整数{\tt x}．
+对{\tt x}进行一次加减运算后的结果会落在 $(-P, 2P)$，
+而{\tt Z::norm}负责将该范围修正回 $[0, P)$．
+
+{\tt Z}支持模意义下的四则运算、相等判断、输入输出．
+
+\lstinputlisting[caption={z.cpp},label={z},language=C++]{Chapter/math/code/z.cpp}
+
+\newpage
+
+\subsection{逆元、阶乘、阶乘逆元、组合数}
+
+{\tt C} 是动态扩容的，逆元{\tt inv}、阶乘{\tt fact}、阶乘逆元{\tt finv}．
+
+{\tt binom(int N, int M)} 返回 $\binom{N}{M} \mod P$．
+
+\lstinputlisting[caption={c.cpp},label={c},language=C++]{Chapter/math/code/c.cpp}
+
+\subsection{地板除、天花板除}
+
+在 C/C++ 中，{\tt a / b}如何取整，取决于编译器的具体实现．但从 C99 和 C++11 起，标准规定：商向零取整，即直接舍弃小数部分．
+{\tt a \% b}被定义为{\tt a - a / b}，因此取模结果的符号取决于{\tt /}如何取整．
+
+\lstinputlisting[caption={int-div.cpp},label={int-div},language=C++]{Chapter/math/code/int-div.cpp}
+
+\newpage
+
+\subsection{扩展 Euclid 算法}
+
+设 $a, b \in \mathbb Z$，且 $a^2 + b^2 > 0$，欲寻找 $\gcd(a, b)$ 其中一种线性组合表示．考虑从
+$$
+\begin{cases}
+1 \cdot a + 0 \cdot b = a \\
+0 \cdot a + 1 \cdot b = b
+\end{cases}
+$$
+开始，对其增广矩阵
+$$
+\begin{pmatrix}
+1 & 0 & a \\
+0 & 1 & b
+\end{pmatrix}
+$$
+进行有限次初等行变换，让每次初等行变换对应于增广列的辗转相除法的每一步即可：
+$$
+\cdots
+\rightarrow
+\begin{pmatrix}
+s & t & g \\
+m & n & h
+\end{pmatrix}
+\rightarrow
+\begin{pmatrix}
+m & n & h \\
+s-qm & t-qn & g-qh
+\end{pmatrix}
+\rightarrow
+\cdots
+\rightarrow
+\begin{pmatrix}
+k & l & \gcd(a, b) \\
+K & L & 0
+\end{pmatrix}
+$$
+
+\lstinputlisting[caption={exgcd.cpp},label={exgcd},language=C++]{Chapter/math/code/exgcd.cpp}
+
+\subsection{Euler 筛、\texorpdfstring{$\varphi(n)$}{φ(n)}}
+
+{\tt minp[x]}是{\tt x}的最小素因子，{\tt prime}是所有素数，{\tt phi[x]}是 $\varphi(x)$．
+
+\lstinputlisting[caption={euler.cpp},label={euler},language=C++]{Chapter/math/code/euler.cpp}
+
+\subsection{算术基本定理}
+
+使用前需获取素数表{\tt prime}，返回的{\tt ind}存放着每个素因子对应的指数．
+
+比如 $120000 = 2^6 \times 3^1 \times 5^4$，则{\tt ind}存放着{\tt [(2, 6), (3, 1), (5, 4)]}．
+
+\lstinputlisting[caption={decomp.cpp},label={decomp},language=C++]{Chapter/math/code/decomp.cpp}
+
+\subsection{获取所有因数}
+
+使用前需实现算术基本定理{\tt decomp}，返回的{\tt div}存放着所有因数．
+
+比如 $120000$ 的因数有 $1, 2, 2^2, \cdots, 2^6 \times 3^1 \times 5^4$，一共有 $7 \times 2 \times 5 = 70$ 个因数．
+
+\lstinputlisting[caption={divisor.cpp},label={divisor},language=C++]{Chapter/math/code/divisor.cpp}
+
+\subsection{异或线性基}
+
+设 $X$ 为有限维线性空间 $V$ 中的向量集，我们可以构造基底 $B$ 使得 $X$ 中的每个向量 $x$ 都可被线性表出．
+由于 $\text{rank}\, B \le \dim V = n$，基向量的个数非常少，这为我们提供了便利．
+
+在布尔域线性空间的例子中，$\mathbb Z_2$ 的加法是异或 $\oplus$，乘法是与 $\&$，
+可以证明 $\mathbb Z_2$ 是域，
+$V = (\mathbb Z_2^n, \oplus, \&, \mathbb Z_2)$ 是线性空间．
+线性表出 $x$ 就是选择 $B$ 的子集，使异或和等于 $x$．
+
+\lstinputlisting[caption={xor-basis.cpp},label={xor-basis},language=C++]{Chapter/math/code/xor-basis.cpp}
+
+\subsection{矩阵乘法、矩阵快速幂}
+
+{\tt Grid} 实现普通二维数组的功能，{\tt Matrix} 实现矩阵的功能，使用 CRTP 技术实现不同数据类型的矩阵．
+
+\lstinputlisting[caption={matrix.cpp},label={matrix},language=C++]{Chapter/math/code/matrix.cpp}
+
+\newpage
+
+\subsection{Gauss 消元法、线性方程组解的结构}
+
+解 $Ax = b$．若得特解 $Ap = b$，
+则任取 $v \in \ker A$，总有 $A(p + v) = b$，因此方程解的结构是 $x = p + v$．
+
+{\tt solve(A, b)} 返回特解 $p$ 和右零空间 $\ker A$ 的基底 $B$．
+
+特别地，当 $\text{rank}\, A < \text{rank}\, [ A \quad b ]$ 时，方程无解；
+当 $\text{rank}\, A = n$ （$A$ 的列数）时，方程有唯一解．
+
+\lstinputlisting[caption={gauss-elim.cpp},label={gauss-elim},language=C++]{Chapter/math/code/gauss-elim.cpp}
+
+\subsection{常见结论}
+
+位运算：
+
+\begin{itemize}[noitemsep]
+    \item $a \mid b = (a \,\&\, b) + (a \oplus b)$；
+    \item $a + b = (a \oplus b) + 2(a \,\&\, b) = (a \mid b) + (a \,\&\, b)$；
+    \item $a \,\&\, b \le \min(a, b) \le \max(a, b) \le a \mid b$；
+    \item $a + b - 2\min(a, b) = |a - b| \le a \oplus b \le a \mid b \le a + b$；
+    \item $\gcd(a, b) \le \min(a, b, a - b, a \bmod b)$，$a > b$；
+    \item $\bigoplus_{k=1}^{n} k = n, 1, n + 1, 0 \quad (n \bmod 4 = 0, 1, 2, 3)$．
+\end{itemize}
+
+$\varphi(n)$：
+
+\begin{itemize}[noitemsep]
+    \item $\sum_{k=1}^{n} [k \perp n] k = n \varphi(n) / 2$；
+    \item $\sum_{d \mid n} \varphi(d) = n$，$\sum_{d \mid n} \mu(d) (n / d) = \varphi(n)$；
+    \item $\sum_{k=1}^{n}\gcd(k, n) = \sum_{d \mid n} \lfloor n / d \rfloor \varphi(d)$；
+\end{itemize}
+
+组合数：
+
+\begin{itemize}[noitemsep]
+    \item
+        $\binom{n}{k} + \binom{n}{k+1} = \binom{n+1}{k+1}$，
+        $k \binom{n}{k} = n \binom{n-1}{k-1}$，
+        $\binom{n}{m}\binom{m}{k} = \binom{n}{k}\binom{n-k}{m-k}$；
+    \item
+        $\sum_{k=0}^{n} \binom{n}{k} = 2^n$，
+        $\sum_{k=0}^{n} (-1)^{k}\binom{n}{k} = 0$；
+    \item
+        $\sum_{k=0}^{n} k \binom{n}{k} = n \cdot 2^{n-1}$，
+        $\sum_{k=0}^{n} k^2 \binom{n}{k} = n (n - 1) \cdot 2^{n-2}$；
+    \item $\sum_{k=1}^{n} \frac{1}{k} \binom{n}{k} = \sum_{k=1}^{n} \frac{1}{k}$；
+    \item $\sum_{k=0}^{n} \binom{n}{k}^2 = \binom{2n}{n}$．
+\end{itemize}
+
+Fibonacci 数列：
+
+\begin{itemize}[noitemsep]
+    \item $F_a \mid F_b$，当且仅当 $a \mid b$；
+    \item $\gcd(F_a, F_b) = F_{\gcd(a, b)}$．
+\end{itemize}
+
+\newpage
+
+\subsection{指数表、对数表、阶乘表、模意义分数表、素数个数 \texorpdfstring{$\pi(n)$}{π(n)} 表、最多因数个数 \texorpdfstring{$D(n)$}{D(n)} 表}
+
+素数个数 $\pi(n) \sim \frac{n}{\ln n}$，因数最多的数的因数个数 $D(n)$ 的级别大约是 $O(\sqrt[3]{n})$．
+
+\vspace{1em}
+
+\begin{center}
+    \begin{minipage}[t]{.4\linewidth}
+        \vspace{0pt}
+        \centering
+        \begin{tabular}{|c|r|}
+            \hline
+            $k$ & $2^k$ \\
+            \hline
+            $10$ & $1,024$ \\
+            \hline
+            $16$ & $65,536$ \\
+            \hline
+            $20$ & $1,048,576$ \\
+            \hline
+            $31$ & $2,147,483,648$ \\
+            \hline
+            $32$ & $4,294,967,296$ \\
+            \hline
+            $48$ & $281,474,976,710,656$ \\
+            \hline
+            $63$ & $9,223,372,036,854,775,808$ \\
+            \hline
+            $64$ & $18,446,744,073,709,551,616$ \\
+            \hline
+        \end{tabular}
+    \end{minipage} %
+    \begin{minipage}[t]{.4\linewidth}
+        \vspace{0pt}
+        \centering
+        \begin{tabular}{|r|r|r|r|}
+            \hline
+            $n$ & $\log_2 n$ & $n$ & $\log_2 n$ \\
+            \hline
+            $3$ & $1.585$ & $10^5$ & $16.610$ \\
+            \hline
+            $5$ & $2.322$ & $2 \times 10^5$ & $17.610$ \\
+            \hline
+            $7$ & $2.807$ & $5 \times 10^5$ & $18.932$ \\
+            \hline
+            $9$ & $3.170$ & $10^6$ & $19.932$ \\
+            \hline
+            $10$ & $3.322$ & $10^8$ & $26.575$ \\
+            \hline
+            $10^2$ & $6.644$ & $10^{12}$ & $39.863$ \\
+            \hline
+            $10^3$ & $9.966$ & $9 \times 10^{18}$ & $62.965$ \\
+            \hline
+            $10^4$ & $13.288$ & $18 \times 10^{18}$ & $63.965$ \\
+            \hline
+        \end{tabular}
+    \end{minipage}
+\end{center}
+
+\vspace{1em}
+
+\begin{center}
+    \begin{tabular}{|c|c|c|c|c|c|c|c|}
+        \hline
+        $n$ & $7$ & $8$ & $9$ & $10$ & $11$ & $12$ & $20$ \\
+        \hline
+        $n!$ & $5,040$ & $40,320$ & $362,880$ & $3,628,800$ & $39,916,800$ & $479,001,600$ & $2,432,902,008,176,640,000$ \\
+        \hline
+    \end{tabular}
+\end{center}
+
+\vspace{1em}
+
+\begin{center}
+    \begin{minipage}[t]{.6\linewidth}
+        \vspace{0pt}
+        \centering
+        \begin{tabular}{|c|c|r|r|}
+            \hline
+            $a$ & $b$ & $a/b \bmod 998,244,353$ & $a/b \bmod 1,000,000,007$ \\
+            \hline
+            $1$ & $2$ & $499,122,177$ & $500,000,004$ \\
+            \hline
+            $1$ & $3$ & $332,748,118$ & $333,333,336$ \\
+            \hline
+            $1$ & $4$ & $748,683,265$ & $250,000,002$ \\
+            \hline
+            $1$ & $5$ & $598,946,612$ & $400,000,003$ \\
+            \hline
+            $1$ & $6$ & $166,374,059$ & $166,666,668$ \\
+            \hline
+            $1$ & $7$ & $855,638,017$ & $142,857,144$ \\
+            \hline
+            $1$ & $8$ & $873,463,809$ & $125,000,001$ \\
+            \hline
+            $1$ & $9$ & $443,664,157$ & $111,111,112$ \\
+            \hline
+            $2$ & $3$ & $665,496,236$ & $666,666,672$ \\
+            \hline
+            $2$ & $5$ & $199,648,871$ & $800,000,006$ \\
+            \hline
+            $2$ & $7$ & $713,031,681$ & $285,714,288$ \\
+            \hline
+            $2$ & $9$ & $887,328,314$ & $222,222,224$ \\
+            \hline
+            $3$ & $4$ & $249,561,089$ & $750,000,006$ \\
+            \hline
+            $3$ & $5$ & $798,595,483$ & $200,000,002$ \\
+            \hline
+            $3$ & $7$ & $570,425,345$ & $428,571,432$ \\
+            \hline
+            $3$ & $8$ & $623,902,721$ & $375,000,003$ \\
+            \hline
+            $4$ & $5$ & $399,297,742$ & $600,000,005$ \\
+            \hline
+            $4$ & $7$ & $427,819,009$ & $571,428,576$ \\
+            \hline
+            $4$ & $9$ & $776,412,275$ & $444,444,448$ \\
+            \hline
+            $5$ & $6$ & $831,870,295$ & $833,333,340$ \\
+            \hline
+            $5$ & $7$ & $285,212,673$ & $714,285,720$ \\
+            \hline
+            $5$ & $8$ & $374,341,633$ & $625,000,005$ \\
+            \hline
+            $5$ & $9$ & $221,832,079$ & $555,555,560$ \\
+            \hline
+            $6$ & $7$ & $142,606,337$ & $857,142,864$ \\
+            \hline
+            $7$ & $8$ & $124,780,545$ & $875,000,007$ \\
+            \hline
+            $7$ & $9$ & $110,916,040$ & $777,777,784$ \\
+            \hline
+            $8$ & $9$ & $554,580,197$ & $888,888,896$ \\
+            \hline
+        \end{tabular}
+    \end{minipage} %
+    \begin{minipage}[t]{.3\linewidth}
+        \vspace{0pt}
+        \centering
+        \begin{tabular}{|c|r|}
+            \hline
+            $n$ & $\le n$ 的素数个数 \\
+            \hline
+            $10$ & $4$ \\
+            \hline
+            $10^2$ & $25$ \\
+            \hline
+            $10^3$ & $168$ \\
+            \hline
+            $10^4$ & $1,229$ \\
+            \hline
+            $10^5$ & $9,592$ \\
+            \hline
+            $10^6$ & $78,498$ \\
+            \hline
+            $10^7$ & $664,579$ \\
+            \hline
+            $10^8$ & $5,761,455$ \\
+            \hline
+            $10^9$ & $50,847,534$ \\
+            \hline
+            $10^{12}$ & $37,607,912,018$ \\
+            \hline
+            $10^{18}$ & $24,739,954,287,740,860$ \\
+            \hline
+        \end{tabular}
+        \par \vspace{1cm}
+        \begin{tabular}{|c|r|}
+            \hline
+            $n$ & 最多因数个数 \\
+            \hline
+            $10$ & $4$ \\
+            \hline
+            $10^2$ & $25$ \\
+            \hline
+            $10^3$ & $32$ \\
+            \hline
+            $10^4$ & $64$ \\
+            \hline
+            $10^5$ & $128$ \\
+            \hline
+            $10^6$ & $240$ \\
+            \hline
+            $10^7$ & $448$ \\
+            \hline
+            $10^8$ & $768$ \\
+            \hline
+            $10^9$ & $1,344$ \\
+            \hline
+            $10^{12}$ & $6,720$ \\
+            \hline
+            $10^{18}$ & $103,680$ \\
+            \hline
+        \end{tabular}
+    \end{minipage}
+\end{center}
+
+% \subsubsection{异或线性基}
+
+\newpage

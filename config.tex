@@ -1,0 +1,49 @@
+﻿\usepackage{amsmath,amsthm,amsfonts,amssymb}
+\usepackage[a4paper,margin=1.7cm]{geometry}
+\usepackage[dvipsnames]{xcolor}
+\usepackage[ruled,linesnumbered,noline]{algorithm2e}
+
+\title{Templates Library}
+\author{Shy\_Vector}
+\date{\today}
+
+\usepackage[colorlinks,linkcolor=blue]{hyperref}
+
+\usepackage{enumitem}
+\usepackage{textcomp}
+
+\setmonofont{FiraCode}[
+    Path = ./FiraCode/ttf/,
+    Extension = .ttf,
+    UprightFont = *-Regular,
+    BoldFont = *-Bold
+]
+
+\usepackage{listings}
+
+\lstdefinestyle{shy}{
+    basicstyle=\ttfamily\fontsize{9}{8}\selectfont,
+    breaklines=false,
+    columns=fixed,
+    keepspaces=true,
+    keywordstyle=\color{blue},
+    identifierstyle=\color{black},
+    stringstyle=\color{violet},
+    commentstyle=\color[RGB]{34,139,34},
+    showstringspaces=false,
+    xleftmargin=0.5em,
+    xrightmargin=0.5em,
+    aboveskip=0.5em,
+    belowskip=1.5em,
+    numbers=left,
+    numbersep=2em,
+    numberstyle=\scriptsize\itshape,
+    frame=single,
+    framesep=0.4em,
+    frameround=tttt,
+    framexleftmargin=0.5em,
+}
+
+\lstset{style=shy}
+\renewcommand{\lstlistingname}{Code}
+

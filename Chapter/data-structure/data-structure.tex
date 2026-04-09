@@ -1,0 +1,188 @@
+\section{数据结构}
+
+\subsection{并查集}
+
+节点编号从 $0$ 到 $n - 1$，使用了路径压缩 + 启发式合并的实现，单次操作平均时间复杂度为 $O(\alpha(n))$．
+
+\lstinputlisting[caption={dsu.cpp},label={dsu},language=C++]{Chapter/data-structure/code/dsu.cpp}
+
+\subsection{带权并查集}
+
+$x, y \in X$ 不仅有关系，还带权 $f(x, y)$，满足{\bf 自反性} $f(x, x) = 1_X$，并且存在运算 $\circ$，使得权值 $f$ 满足{\bf 传递性}
+$$
+f(x, z) = f(x, y) \circ f(y, z)
+$$
+只要存在运算 $\neg$，使得权值 $f$ 满足{\bf 对称性}
+$$
+f(y, x) = \neg f(x, y)
+$$
+那么 $f$ 可以使用带权并查集来维护．
+
+设 $x, y$ 的根分别为 $r_x, r_y$，
+已知 $f(x, y), f(x, r_x), f(y, r_y)$，
+欲使 $r_{r_x} = r_y$，有
+$$
+f(r_x, r_y) = \neg f(x, r_x) \circ f(x, y) \circ f(y, r_y)
+$$
+由于自反性，如果合并时已经有 $r_x = r_y$，那么右式必等于 $1_X$，利用这一点来判断关系 $f$ 是否良定义．
+在这之后的适当时机（查询时），修正 $f(x, r_x) \mapsto f(x, r_x) \circ f(r_x, r_y)$．
+
+最经典的 $f$ 是数轴上两点的有向距离（如区间和），也可以是环上的两点距离（如“食物链”的模 $n$ 加法群）．
+下面以异或为例：自反性 $x \oplus x = 0$，传递性 $x \oplus z = (x \oplus y) \oplus (y \oplus z)$，
+对称性 $y \oplus x = x \oplus y$，使用带权并查集维护：
+
+\newpage
+
+\lstinputlisting[caption={w-dsu.cpp},label={w-dsu},language=C++]{Chapter/data-structure/code/w-dsu.cpp}
+
+\subsection{可持久化并查集}
+
+可持久化并查集是 leafy 的．
+
+对{\tt fa}和{\tt sz}数组实现了可持久化，单次访问 $O(\log n)$．
+
+对两棵树启发式合并，保证了树高是 $O(\log n)$ 级别，
+因此一次查询是 $O(\log^2 n)$ 的．
+
+\begin{enumerate}[noitemsep]
+    \item {\tt PDSU()}：初始化从节点 $0$ 到节点 $n - 1$ 的并查集作为第 $0$ 个版本，$m$ 是对最大版本数的估计；
+    \item {\tt latest()/latest\_()}：返回最近版本号/根节点；
+    \item {\tt save()/save\_()}：传入版本号/根节点，拷贝该版本作为新版本；
+    \item {\tt find()/find\_()}：传入版本号/根节点、索引{\tt i}，返回同类的代表（叶）节点以及对应的索引；
+    \item {\tt same()/same\_()}：传入版本号/根节点、两个索引，判定是否同类；
+    \item {\tt merge()/merge\_()}：传入版本号/根节点、两个索引，合并后{\bf 自动产生新版本}；
+    \item {\tt merged()/merged\_()}：传入版本号/根节点、两个索引，合并后{\bf 返回新根，不产生新版本}；
+    \item {\tt leaf()/leaf\_()}：传入版本号/根节点、索引{\tt i}，返回对应的叶节点；
+    \item {\tt modify()/modify\_()}：传入版本号/根节点、待修改节点的索引{\tt i}、修改内容（{\tt fa}和{\tt sz}），返回新根．
+\end{enumerate}
+
+\newpage
+
+\lstinputlisting[caption={p-dsu.cpp},label={p-dsu},language=C++]{Chapter/data-structure/code/p-dsu.cpp}
+
+\subsection{树状数组}
+
+数组元素 $a_i \in A$，对 $a$ 交替进行：
+{\bf 单点修改} $a_i \mapsto a_i * x$；
+{\bf 前缀查询} $S(k) = \prod_{0 \le i < k} a_i$．
+
+如果 $(A, *)$ 构成{\bf 半群} (即 $*$ 仅满足结合律)，那么可以使用树状数组 $p$ 来维护 $a$：
+$$
+p_k = \prod_{k - \text{lowbit}(k) \le i < k} a_i, \quad
+1 \le k \le n
+$$
+每个 $p_k$ 管辖了在 $a_k$ 前面 $\text{lowbit}(k)$ 个元素．
+在实践中，为了方便建树，我们额外要求 $(A, *)$ 具备{\bf 幺元}，即幺半群．
+
+前缀查询时，$S(k)$ 始终能被拆成 $O(\log k)$ 个 $p_i$ 之积，以达成 $O(\log n)$ 的查询复杂度，常数因子非常优秀．
+具体来说，$S(k)$ 能按照 $k$ 的二进制表示，被拆成 $\text{popcount}(k)$ 个 $p_i$ 之积．例如 $k = 22$ 的情形：
+$$
+\begin{aligned}
+    (10110)_2 &= (10000)_2 + (00100)_2 + (00010)_2 \\
+    [0, 22) &= [0, 16) \cup [16, 20) \cup [20, 22) \\
+    S(22) &= p_{16} * p_{20} * p_{22}
+\end{aligned}
+$$
+
+单点修改时，只需修改 $O(\log n)$ 个管辖范围包含 $a_i$ 的区间．
+修改区间从 $p_{i+1}$ 开始，能够证明 $p_k$ 的下一个管辖范围包含 $a_i$ 的区间是 $p_{k + \text{lowbit(k)}}$．
+
+\lstinputlisting[caption={fenwick.cpp},label={fenwick},language=C++]{Chapter/data-structure/code/fenwick.cpp}
+
+\subsection{线段树}
+
+今有半群 $(D, +)$．
+和树状数组一样，线段树能维护由{\bf 半群}元素构成的数组，比如区间和/积、区间最值、区间 gcd．
+相比树状数组使用二进制结构维护区间片段以合成前缀区间，线段树直接二分区间直至区间长度为 $1$，因此可以实现任意的{\bf 区间查询}．
+如果只有{\bf 单点修改}的需求，可以不用实现懒标记．
+
+在实践中，为了方便合并子区间信息，我们额外要求 $(D, +)$ 还具备{\bf 幺元}，即幺半群．
+
+\begin{enumerate}[noitemsep]
+    \item {\tt Info::Info()}：$D$ 的幺元；
+    \item {\tt Info::operator+(Info)}：$D$ 的运算 $+$．
+\end{enumerate}
+
+使用时：
+
+\begin{enumerate}[noitemsep]
+    \item {\tt build} 要求在建树前完成对{\tt info}的初始化{\tt init}；
+    \item {\tt modify} 单点赋值：对{\tt info[i]}赋值；
+    \item {\tt query} 区间查询：对{\tt info[L, R)}信息汇总．
+\end{enumerate}
+
+\lstinputlisting[caption={sgt.cpp},label={sgt},language=C++]{Chapter/data-structure/code/sgt.cpp}
+
+\subsection{线段树（动态开点）}
+
+当区间分布跨度极广，但区间总长在可接受范围内时，可以用动态开点的方式代替直接在极广区间上建树．
+此时父子节点的编号关系已不存在，需要额外维护每个节点的{\tt lson}和{\tt rson}．
+每次从根出发向下查询，需要时刻{\tt push}探路，没路就新开节点{\tt node}．
+
+使用 {\tt i64} 表示区间端点．
+动态开点的线段树{\bf 与普通线段树使用方法完全一致}，能访问的下标得到极大扩展．
+使用前需给定全局最广区间{\tt [mini, maxi)}，但请注意：{\bf 越广的区间意味着越大的常数}．
+
+\lstinputlisting[caption={sgt-dynamic.cpp},label={sgt-dynamic},language=C++]{Chapter/data-structure/code/sgt-dynamic.cpp}
+
+\subsection{带懒标记的线段树}
+
+形式化地，信息 $(D, +)$ 构成{\bf 半群}，标记 $(T, *)$ 构成{\bf 幺半群}，
+另外定义 $\cdot: T \times D \rightarrow D$，并且 $\cdot$ 对 $+$ 满足{\bf 分配律}，
+这种代数结构我们可以使用带懒标记的线段树来维护．为了方便合并子区间信息，我们额外要求 $(D, +)$ 还具备幺元，即幺半群．
+
+使用前需定义{\tt Info}和{\tt Tag}，包括：
+
+\begin{enumerate}[noitemsep]
+    \item {\tt Info::Info()}：$D$ 的幺元；
+    \item {\tt Info::operator+(Info)}：$D$ 的运算 $+$；
+    \item {\tt Info::operator+=(Tag)}：满足分配律的运算 $\cdot$；
+    \item {\tt Tag::Tag()}：$T$ 的幺元；
+    \item {\tt Tag::operator+=(Tag)}：$T$ 的运算 $*$．
+\end{enumerate}
+
+使用时：
+
+\begin{enumerate}[noitemsep]
+    \item {\tt build} 要求在建树前完成对{\tt info}的初始化{\tt init}；
+    \item {\tt modify} 单点赋值：对{\tt info[i]}赋值；
+    \item {\tt apply} 区间操作：对{\tt info[L, R)}施加操作{\tt t}；
+    \item {\tt query} 区间查询：对{\tt info[L, R)}信息汇总．
+\end{enumerate}
+
+\lstinputlisting[caption={sgt-tag.cpp},label={sgt-tag},language=C++]{Chapter/data-structure/code/sgt-tag.cpp}
+
+\subsection{带懒标记的线段树（动态开点）}
+
+当区间分布跨度极广，但区间总长在可接受范围内时，可以用动态开点的方式代替直接在极广区间上建树．
+此时父子节点的编号关系已不存在，需要额外维护每个节点的{\tt lson}和{\tt rson}．
+每次从根出发向下查询，需要时刻{\tt push}探路，没路就新开节点{\tt node}．
+
+使用 {\tt i64} 表示区间端点．
+动态开点的线段树{\bf 与普通线段树使用方法完全一致}，能访问的下标得到极大扩展．
+使用前需给定全局最广区间{\tt [mini, maxi)}，但请注意：{\bf 越广的区间意味着越大的常数}．
+
+\lstinputlisting[caption={sgt-tag-dynamic.cpp},label={sgt-tag-dynamic},language=C++]{Chapter/data-structure/code/sgt-tag-dynamic.cpp}
+
+\subsection{可持久化线段树}
+
+仅支持{\bf 单点修改}，接口和前面可持久化并查集类似，支持手动控制版本保存：
+
+\begin{enumerate}[noitemsep]
+    \item {\tt build()}：初始化第 $0$ 个版本，$m$ 是对最大版本数的估计；
+    \item {\tt latest()/latest\_()}：返回最近版本号/根节点；
+    \item {\tt save()/save\_()}：传入版本号/根节点，拷贝该版本作为新版本；
+    \item {\tt modify()/modify\_()}：传入版本号/根节点，单点修改，{\bf 自动保存版本}；
+    \item {\tt modified()/modified\_()}：传入版本号/根节点，单点修改，{\bf 不保存版本}，返回新根以供用户自由处理；
+    \item {\tt query()/query\_()}：传入版本号/根节点，区间查询，不产生版本．
+\end{enumerate}
+
+\lstinputlisting[caption={p-sgt.cpp},label={p-sgt},language=C++]{Chapter/data-structure/code/p-sgt.cpp}
+
+\subsection{红黑树}
+
+直接使用{\tt libstdc++}标准库里{\tt pb\_ds}的红黑树实现：
+
+\lstinputlisting[caption={pbds.cpp},label={pbds},language=C++]{Chapter/data-structure/code/pbds.cpp}
+
+\newpage

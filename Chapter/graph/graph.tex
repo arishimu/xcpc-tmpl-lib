@@ -1,0 +1,147 @@
+\section{图}
+
+\subsection{Floyd 全源最短路}
+
+Floyd 适合在稠密图上使用，时间复杂度为 $O(N^3)$．
+
+\lstinputlisting[caption={floyd.cpp},label={floyd},language=C++]{Chapter/graph/code/floyd.cpp}
+
+\subsection{Johnson 全源最短路}
+
+先从超级源点开始跑一遍 SPFA 获取所有点的最短距离作为势能 $h(u)$，
+然后把势能差加在边权上 $w'(u,v) = w(u,v) + h(u) - h(v)$ 使其非负，
+最后从每个点出发跑 Dijkstra（使用优先队列优化），减去 $h(u) - h(v)$ 即可获得原始距离．
+Johnson 适合在稀疏图上使用，时间复杂度为 $O(NM \log M)$．
+
+当原图存在负环时，{\tt johnson()} 返回为空；
+当两点之间不存在路径时，距离值为 {\tt Graph<T>::INF}．
+
+\lstinputlisting[caption={johnson.cpp},label={johnson},language=C++]{Chapter/graph/code/johnson.cpp}
+
+\subsection{强连通分量缩点}
+
+有向图上两点彼此可达，则称该点对强连通．
+强连通是等价关系，因此可将有向图上的点划分为若干强连通分量，通常会将同一个分量下的点缩成一点．
+
+节点编号是 0-based 的，建图使用 {\tt add\_edge(u, v)}，使用 {\tt compress()} 缩点后：
+
+\begin{itemize}[noitemsep]
+    \item {\tt SCC::cid}：原图上的点所处强连通分量的编号（0-based）；
+    \item {\tt SCC::Graph::n}：缩点后的点数，即强连通分量个数；
+    \item {\tt SCC::Graph::dots[i]}：强连通分量 {\tt i} 内的所有节点；
+    \item {\tt SCC::Graph::edges}：缩点后的边集，端点是强连通分量的编号．
+\end{itemize}
+
+缩点后的图是有向无环图（DAG）．
+
+\lstinputlisting[caption={scc.cpp},label={scc},language=C++]{Chapter/graph/code/scc.cpp}
+
+\subsection{边双连通分量缩点}
+
+删除无向图上任意一边，两点始终连通，则称该点对边双连通．
+与强连通分量缩点相似，边双连通也是等价关系，可以将同一分量上的点缩为一点．
+在无向图的 DFS 树中，向 dfn 小的点的连边不再有横跨边，只有返祖边．
+当 {\tt low == dfn} 时，说明子树向祖先的路径必经过根所在的桥，形成边双连通分量．
+
+在原图上可以通过检查 {\tt cid} 是否相同来判断是否为桥．
+
+可处理重边和自环．缩点后的图是由桥边组成的森林．
+
+\lstinputlisting[caption={edcc.cpp},label={edcc},language=C++]{Chapter/graph/code/edcc.cpp}
+
+\subsection{最大流}
+
+Dinic 算法使用 BFS 分层避免过大的增广深度，多路同时增广，当前弧优化跳过了此轮增广已拒流的弧．
+获得最大流后，自动获得当前的最小割：由最大流最小割定理，两者相等．
+
+\begin{itemize}[noitemsep]
+    \item {\tt MaxFlow::add\_edge(u, v, cap)}：
+        添加带容量 {\tt cap} 的有向边 {\tt i}，
+        自动添加反向边 {\tt i \textasciicircum{} 1} 实现反悔；
+    \item {\tt MaxFlow::flow(s, t)}：BFS 分层，DFS 多路增广，直至无法增广；
+    \item {\tt MaxFlow::get\_flow(u)}：获取该有向边的当前流量；
+    \item {\tt MaxFlow::get\_side(u)}：判断该点是否位于最小割的源点一侧．
+\end{itemize}
+
+使用 {\tt get\_flow} 和 {\tt get\_side} 之前，都需要先调用 {\tt flow} 完成最大流．
+
+\lstinputlisting[caption={max-flow.cpp},label={max-flow},language=C++]{Chapter/graph/code/max-flow.cpp}
+
+\subsection{最小费用最大流}
+
+SSP 算法适用于无负圈网络，每次贪心选择最短的增广路．
+
+由于正反两向边费用互为相反数，存在负边权，无法直接使用 Dijkstra 获得增广路．
+Primal-Dual 原始对偶算法仿照 Johnson 全源最短路算法，为每个点赋予势能，使新边权非负．
+每轮增广后图的形态发生变化，用最短距离叠加到势能上更新势能．
+
+{\tt MinCostFlow} 的使用方法与 {\tt MaxFlow} 相同．
+
+\lstinputlisting[caption={min-cost-flow.cpp},label={min-cost-flow},language=C++]{Chapter/graph/code/min-cost-flow.cpp}
+
+\newpage
+
+\subsection{有向图 Euler 路径/回路}
+
+\begin{itemize}[noitemsep]
+    \item 迹：点可重走，边不可重走；
+    \item Euler 路径：经过所有边的迹；
+    \item Euler 回路：起点和终点相同的 Euler 路径．
+\end{itemize}
+
+含 $N$ 个点的有向图存在 Euler 路径，当且仅当
+
+\begin{itemize}[noitemsep]
+    \item 排除孤立点后，图是弱连通的；
+    \item 恰有 $N - 2$ 个点，入度和出度相等；
+    \item 恰有 $1$ 个点（起点），出度比入度大 $1$；
+    \item 恰有 $1$ 个点（终点），入度比出度大 $1$．
+\end{itemize}
+
+特别地，零图存在 Euler 路径（空集），是半欧拉图．但模板不为此做特判，将返回空的 {\tt trail}．
+
+含 $N$ 个点的有向图存在 Euler 回路，当且仅当
+
+\begin{itemize}[noitemsep]
+    \item 排除孤立点后，图是弱连通的；
+    \item 每个点的入度和出度相等．
+\end{itemize}
+
+Hierholzer 算法第一轮 DFS 终止在终点/起点，形成主线/环，
+从上面的点 {\tt x} 出发继续沿着未访问的出边 DFS，回到点 {\tt x} 终止，一直循环往复．
+回溯把沿途边压入答案中，逆序输出．时间复杂度为 $O(N + M)$．
+
+{\tt eulerian()} 返回沿着 Euler 路径上所有边的 {\tt eid}，
+使用 {\tt Graph::e[eid]} 获取边的信息．
+
+使用前，可以调用 {\tt lexico()} 使输出的 Euler 路径的点列字典序最小．
+
+\lstinputlisting[caption={eulerian-directed.cpp},label={eulerian-directed},language=C++]{Chapter/graph/code/eulerian-directed.cpp}
+
+\subsection{无向图 Euler 路径/回路}
+
+含 $N$ 个点的无向图存在 Euler 路径，当且仅当
+
+\begin{itemize}[noitemsep]
+    \item 排除孤立点后，图是连通的；
+    \item 恰有 $N - 2$ 个点，度数是偶数；
+    \item 恰有 $2$ 个点（起点和终点），度数是奇数．
+\end{itemize}
+
+特别地，零图存在 Euler 路径（空集），是半欧拉图．但模板不为此做特判，将返回空的 {\tt trail}．
+
+含 $N$ 个点的无向图存在 Euler 回路，当且仅当
+
+\begin{itemize}[noitemsep]
+    \item 排除孤立点后，图是连通的；
+    \item 所有点的度数都是偶数．
+\end{itemize}
+
+在实现中，无向边用正反两条有向边表示，
+正向的 {\tt eid} 是偶数（0-based），反向的 {\tt eid} 是奇数，
+通过 {\tt eid \textasciicircum{} 1} 获取对应的反边，用于避免 DFS 重复访边．
+通过 {\tt eid >> 1} 获取对应无向边的编号（0-based）．
+
+\lstinputlisting[caption={eulerian-undirected.cpp},label={eulerian-undirected},language=C++]{Chapter/graph/code/eulerian-undirected.cpp}
+
+\newpage

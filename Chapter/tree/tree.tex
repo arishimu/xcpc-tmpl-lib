@@ -1,0 +1,63 @@
+\section{树}
+
+\subsection{重链剖分（LCA，两点距离，祖先判断、\texorpdfstring{$k$}{k} 级祖先）}
+
+经过重链剖分，一棵树被拆成若干链，链内是重边，链外是轻边．
+从根节点出发，每经过一次轻边，当前子树大小至少减半．
+因此在任意路径上，轻边数量至多 $O(\log n)$ 条，
+即路径总能拆成 $O(\log n)$ 段连续链区间．
+
+关于 dfn 序（0-based）的性质：
+\begin{itemize}[noitemsep]
+    \item 一条链上自上而下，dfn 构成递增的连续区间，可据此在链上寻址、对路径操作；
+    \item 子树所有节点的 dfn 构成的集合是连续区间，可据此对子树操作．
+\end{itemize}
+
+我们使用：
+\begin{itemize}[noitemsep]
+    \item {\tt top[u]} 表示 {\tt u} 所处链的头部；
+    \item {\tt in[u]} 表示 {\tt u} 的 dfn；
+    \item {\tt [in[u], out[u])} 表示 {\tt u} 子树的 dfn 区间；
+    \item {\tt seq[i]} 将 dfn 序 {\tt i} 转化为对应节点编号．
+\end{itemize}
+
+节点编号是 0-based 的．
+
+\lstinputlisting[caption={hld-base.cpp},label={hld-base},language=C++]{Chapter/tree/code/hld-base.cpp}
+
+\subsection{重链剖分（换根后的父节点、子树大小、LCA）}
+
+{\tt get\_rooted\_fa} 和 {\tt get\_rooted\_sz} 的复杂度都是 $O(\log \deg p)$．
+
+\lstinputlisting[caption={hld-rooted.cpp},label={hld-rooted},language=C++]{Chapter/tree/code/hld-rooted.cpp}
+
+\newpage
+
+\subsection{重链剖分（线段树维护路径信息、子树信息）}
+
+使用线段树维护 dfn 区间．
+
+\lstinputlisting[caption={hld-sgt.cpp},label={hld-sgt},language=C++]{Chapter/tree/code/hld-sgt.cpp}
+
+如果要维护有向的 dfn 区间（比如点权的结合（如仿射函数的复合）不满足交换律），
+那么需要为 {\tt Info} 设计正反两向区间信息 {\tt Info::forw/backw}．
+合并 {\tt Info} 时，{\bf 正向信息正向拼接，反向信息反向拼接}．
+
+\lstinputlisting[caption={hld-sgt-directed.cpp},label={hld-sgt-directed},language=C++]{Chapter/tree/code/hld-sgt-directed.cpp}
+
+\newpage
+
+\subsection{直径}
+
+经过子树根节点的直径由最深路径和次深路径组成，使用树形 DP 解决，支持负边权，时间复杂度为 $O(n)$．
+
+\lstinputlisting[caption={diameter.cpp},label={diameter},language=C++]{Chapter/tree/code/diameter.cpp}
+
+\subsection{重心}
+
+去除重心后，每棵子树大小不超过 $n / 2$，据此寻找重心．
+求有根树每棵子树的重心，时间复杂度为 $O(n)$．
+
+\lstinputlisting[caption={centroid.cpp},label={centroid},language=C++]{Chapter/tree/code/centroid.cpp}
+
+\newpage

@@ -1,0 +1,75 @@
+\section{编程}
+
+\subsection{代码风格}
+
+\begin{enumerate}[itemsep=2pt, topsep=0pt, parsep=0pt]
+    \item 使用 {\bf C++17} 标准，无法使用{\tt <bit>}、{\tt <print>}、{\tt this auto}、{\tt Concept}、内部类对象返回、自定义类对象作为非类型模板参数；
+    \item 默认使用 {\bf 0-based 下标}，视情况使用 1-based 下标；
+    \item 涉及区间划分时，使用{\bf 左闭右开}区间；
+    \item 大括号采用 K\&R 风格；
+    \item 缩进使用 4 空格，不使用 Tab；
+    \item 变量名使用下划线，类名使用大驼峰，临时类名使用下划线；
+    \item 词素之间使用空格间隔，遇到内容较长的下标可省略空格；
+    \item 不到万不得已，不要使用头文件{\tt <bits/stdc++.h>}；
+    \item 严禁使用{\tt using namespace std}污染全局命名空间；
+    \item 除调试以外，严禁使用宏；
+    \item 遇到简短的代码块时，语义单一的可压行；
+    \item 遇到很长的代码块时，首尾和中间都使用换行，区分功能不同的代码段；
+    \item 函数参数过长时，换行缩进，灵活调整；
+    \item 善用 early return，减少不必要的缩进；
+    \item 使用{\tt std::vector}而非全局数组；
+    \item 遇到{\tt std::vector<bool>}时，{\tt using u8 = uint8\_t}；
+    \item 使用{\tt '\textbackslash n'}，而非{\tt std::endl}，除非遇到交互式的题目；
+    \item 善用{\tt int}、{\tt i64}、{\tt u64}强调语义：下标/容量、值/答案、位运算处理；
+    \item 善用{\tt auto}类型推导和{\tt ADL}，规避冗长的类型和模板参数；
+    \item 尽量使用{\tt lambda}递归，方便捕获变量，不要使用{\tt std::function}；
+    \item 自定义比较函数时，使用{\tt lambda}或自定义{\tt functor}，而非侵入式地重载{\tt operator<}；
+    \item 返回多个返回值时，需在内/外部自定义类型明确字段语义，不使用{\tt std::pair}/{\tt std::tuple}；
+\end{enumerate}
+
+\subsection{开局模板}
+
+\lstinputlisting[caption={init.cpp},label={init},language=C++]{Chapter/coding/code/init.cpp}
+
+\newpage
+
+\subsection{代码调试}
+
+在没有{\tt gdb}的使用条件下，可以通过打印中间变量值进行调试．
+
+\lstinputlisting[caption={dbg.cpp},label={dbg},language=C++]{Chapter/coding/code/dbg.cpp}
+
+\subsection{{\tt i128}读写}
+
+\lstinputlisting[caption={i128.cpp},label={i128},language=C++]{Chapter/coding/code/i128.cpp}
+
+\subsection{字符串转数值}
+
+使用 {\tt sto}（{\tt std::string}）或 {\tt strto}（{\tt const char*}）家族的函数．
+
+比如转为整型 {\tt stoi(std::string s, size\_t *pos, int base)}，{\tt stoll}，{\tt stoull}：
+
+\begin{enumerate}[noitemsep]
+    \item 跳过空白字符（{\tt ' '，'\textbackslash n'，'\textbackslash t'}）；
+    \item 若 {\tt base}（默认为 {\tt 10}）指定为 {\tt 0}，自动根据前缀（{\tt '+/-'，'0'，"0x"}）确定；
+    \item 若 {\tt pos} 非 {\tt nullptr}，返回识别成功的开始位置至 {\tt pos}（前缀不算）．
+\end{enumerate}
+
+{\tt strtoll(const char *s, char **end, int base)} 使用方法类似．
+
+转为浮点数 {\tt stod(std::string s, size\_t *pos)}，
+{\tt stold}，{\tt stof}，支持小数点和指数 {\tt 'e/E'}．
+
+\lstinputlisting[caption={stoi.cpp},label={stoi},language=C++]{Chapter/coding/code/stoi.cpp}
+
+\subsection{数值转字符串}
+
+使用 {\tt std::to\_string(T value)} 将整型、浮点数转化为字符串（输出不支持进制和指数格式）．
+
+使用 {\tt std::snprintf(char *buf, size\_t n, const char* fmt, ...)} 转为格式化字符串．
+
+\lstinputlisting[caption={itos.cpp},label={itos},language=C++]{Chapter/coding/code/itos.cpp}
+
+使用 {\tt std::bitset<32>(x)} 输出 {\tt x} 的二进制表示．
+
+\newpage
