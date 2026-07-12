@@ -70,8 +70,8 @@ struct PSGT {
 
 void test() {
 
-    int n, m;
-    std::cin >> n >> m;
+    int N, M, Q;
+    std::cin >> N >> M >> Q;
 
     struct Info {
         i64 S;
@@ -81,20 +81,25 @@ void test() {
     };
 
     PSGT<Info> sgt;
-    std::vector<Info> arr(n);
-    for (auto &[S] : arr) std::cin >> S;
-    sgt.build(arr, m);
+    sgt.build(std::vector<Info>(M), Q);
+    std::vector<int> line(N);
 
-    while (m--) {
-        int v, op, i;
-        std::cin >> v >> op >> i; i--;
+    while (Q--) {
+        int op;
+        std::cin >> op;
         if (op == 1) {
-            i64 c;
-            std::cin >> c;
-            sgt.modify(v, i, {c});
+            int i, j;
+            std::cin >> i >> j; i--, j--;
+            line[i] = line[j];
         } else if (op == 2) {
-            std::cout << sgt.query(v, i, i + 1).S << '\n';
-            sgt.save(v);
+            int i, k; i64 z;
+            std::cin >> i >> k >> z; i--, k--;
+            sgt.modify(line[i], k, z);
+            line[i] = sgt.latest();
+        } else if (op == 3) {
+            int i, l, r;
+            std::cin >> i >> l >> r; i--, l--, r--, r++;
+            std::cout << sgt.query(line[i], l, r).S << '\n';
         }
     }
 
