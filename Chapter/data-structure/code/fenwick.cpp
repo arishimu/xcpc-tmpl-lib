@@ -1,70 +1,82 @@
-template <class T, class F>
+#include <algorithm>
+#include <iostream>
+#include <vector>
+
+using i64 = int64_t;
+
+template <class Info, class Merge>
 struct Fenwick {
 
-    int n; F f;
-    std::vector<T> p;
-    Fenwick(F f) : f(f) {}
+    int n;
+    Info id;
+    Merge merge;
+    std::vector<Info> info;
 
-    void build(std::vector<T> const &a) {
-        n = a.size();
-        p.assign(n + 1, {});
-        for (int x = 1; x <= n; x++) {
-            p[x] = f(p[x], a[x - 1]);
-            int y = x + (x & -x);
-            if (y > n) continue;
-            p[y] = f(p[y], p[x]);
+    Fenwick(int n, Info id = {}) : n(n), id(id), info(n + 1) {}
+    Fenwick(std::vector<Info> const &v, Info id = {}) : Fenwick(v.size(), id) {
+        for (int i = 1; i <= n; i++) {
+            info[i] = merge(info[i], v[i - 1]);
+            int j = i + (i & -i);
+            if (j <= n) info[j] = merge(info[j], info[i]);
         }
     }
 
-    // i \in [0, n)
-    void modify(int i, T const &v) {
-        for (int x = i + 1; x <= n; x += x & -x)
-            p[x] = f(p[x], v);
-    }
+    void add(int k, Info v) {
+        for (int i = k + 1; i <= n; i += i & -i)
+            info[i] = merge(info[i], v); }
 
-    // return S[0, k), where k \in [1, n]
-    T query(int k) {
-        T ans = T{};
-        for (int x = k; x >= 1; x -= x & -x)
-            ans = f(ans, p[x]);
-        return ans;
-    }
-
-    // return r \in [1, n], where S[0, r) is the largest of <= v
-    int find(T const &v) {
-        T acc{}; int r = 0, width = 32 - __builtin_clz(n);
-        for (int mask = 1 << (width - 1); mask; mask >>= 1) {
-            if ((r | mask) > n) continue;
-            T tmp = f(acc, p[r | mask]);
-            if (tmp > v) continue;
-            r |= mask;
-            acc = tmp;
-        }
+    Info ask(int k) {
+        Info acc = id;
+        for (int i = k; i >= 1; i -= i & -i)
+            acc = merge(acc, info[i]);
+        return acc;
     }
 
 };
 
-void test() {
-    int n, m;
-    std::cin >> n >> m;
-    std::vector<i64> arr(n);
-    for (auto &x : arr) std::cin >> x;
-
-    using add = std::plus<i64>;
-    Fenwick<i64, add> fw(add{});
-    fw.build(arr);
-
-    while (m--) {
-        int op;
-        std::cin >> op;
-        if (op == 1) {
-            int i; i64 v;
-            std::cin >> i >> v; i--;
-            fw.modify(i, v);
-        } else if (op == 2) {
-            int l, r;
-            std::cin >> l >> r; l--, r--, r++;
-            std::cout << fw.query(r) - fw.query(l) << '\n';
-        }
+// discrete -> {0, 1, 2, ...}
+template <class T, class Comp = std::less<T>>
+struct Disc {
+    std::vector<T> pool;
+    void clear() { pool.clear(); }
+    auto size() { return pool.size(); }
+    void insert(T const &x) { pool.push_back(x); }
+    void mapping() {
+        std::sort(pool.begin(), pool.end());
+        pool.erase(std::unique(pool.begin(), pool.end()), pool.end());
     }
+    auto dec(int id) -> T { return pool[id]; }
+    auto enc(T const &x) -> int {
+        auto it = std::lower_bound(pool.begin(), pool.end(), x);
+        return it - pool.begin();
+    }
+};
+
+void solve() {
+
+    int n, q;
+    std::cin >> n >> q;
+    Disc<i64> disc;
+    std::vector<i64> a(n);
+    for (auto &x : a) std::cin >> x, disc.insert(x);
+    disc.insert(INT64_MAX);
+
+    disc.mapping();
+    std::vector<int> cnt(disc.size());
+    for (auto &x : a) cnt[disc.enc(x)] += 1;
+    Fenwick<int, std::plus<int>> fwk(cnt);
+
+    while (q--) {
+        int k;
+        std::cin >> k; // 0-based k-min
+        int acc = 0, cur = 0, w = 31 - __builtin_clz(cnt.size());
+        for (int p = 1 << w; p; p >>= 1) {
+            if ((cur | p) > n) continue;
+            int t = acc + fwk.info[cur | p];
+            if (t > k) continue;
+            acc = t, cur |= p;
+        }
+        std::cout << disc.dec(cur) << '\n';
+    }
+
 }
