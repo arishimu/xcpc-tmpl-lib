@@ -1,106 +1,128 @@
-template <class Info>
-struct PSGT {
+#include <algorithm>
+#include <functional>
+#include <iostream>
+#include <optional>
+#include <vector>
 
-    int n;
-    std::vector<int> root, lson, rson;
+using i64 = int64_t;
+
+template <class Info, class Merge,
+    class Init = decltype([](i64, i64){ return Info{}; })>
+struct PstSegTree {
+
+    i64 L, R;
+    std::vector<int> lson, rson;
     std::vector<Info> info;
+    std::optional<Init> init;
+    Merge merge;
 
-    int node() {
-        lson.emplace_back();
-        rson.emplace_back();
-        info.emplace_back();
+    auto node(i64 l, i64 r) -> int {
+        lson.push_back(0);
+        rson.push_back(0);
+        info.push_back((*init)(l, r));
         return info.size() - 1;
     }
 
-    int clone(int p) {
+    void dive(int p, i64 l, i64 m, i64 r) {
+        if (!lson[p]) lson[p] = node(l, m);
+        if (!rson[p]) rson[p] = node(m, r);
+    }
+
+    auto clone(int p) -> int {
         lson.push_back(lson[p]);
         rson.push_back(rson[p]);
         info.push_back(info[p]);
         return info.size() - 1;
     }
 
-    void build(std::vector<Info> const &init, int m) {
-        auto build_ = [&](auto &f, int l, int r) -> int {
-            int p = node();
-            if (l + 1 == r) return info[p] = init[l], p;
-            int m = (l + r) >> 1;
-            lson[p] = f(f, l, m);
-            rson[p] = f(f, m, r);
-            info[p] = info[lson[p]] + info[rson[p]];
-            return p;
-        };
-        node();
-        n = init.size();
-        root.reserve(m);
-        int z = n * 4 + m * (32 - __builtin_clz(n));
-        lson.reserve(z), rson.reserve(z), info.reserve(z);
-        root.push_back(build_(build_, 0, n));
+    auto build(i64 L, i64 R, Init init = {}) -> int {
+        this->L = L, this->R = R, this->init.emplace(init);
+        lson.resize(1), rson.resize(1), info.resize(1);
+        return node(L, R);
     }
 
-    int latest() { return root.size() - 1; }
-    int latest_() { return root.back(); }
-    void save(int ver) { save_(root[ver]); }
-    void save_(int p) { root.push_back(p); }
-
-    void modify(int ver, int i, Info const &v) { save_(modified(ver, i, v)); }
-    void modify_(int p, int i, Info const &v) { save_(modified_(p, i, v)); }
-
-    int modified(int ver, int i, Info const &v) { return modified_(root[ver], i, v); }
-    int modified_(int p, int i, Info const &v) { return modified_(p, 0, n, i, v); }
-    int modified_(int p, int l, int r, int i, Info const &v) {
+    int modify(int p, i64 i, auto&& f) { return modify(p, L, R, i, f); }
+    int modify(int p, i64 l, i64 r, i64 i, auto&& f) {
         p = clone(p);
-        if (l + 1 == r) return info[p] = v, p;
-        int m = (l + r) >> 1;
-        if (i < m) lson[p] = modified_(lson[p], l, m, i, v);
-        else rson[p] = modified_(rson[p], m, r, i, v);
-        info[p] = info[lson[p]] + info[rson[p]];
+        if (r - l == 1) return info[p] = f(info[p]), p;
+        i64 m = l + (r - l) / 2;
+        dive(p, l, m, r);
+        if (i < m) lson[p] = modify(lson[p], l, m, i, f);
+        else rson[p] = modify(rson[p], m, r, i, f);
+        info[p] = merge(info[lson[p]], info[rson[p]]);
         return p;
     }
 
-    Info query(int ver, int L, int R) { return query_(root[ver], L, R); }
-    Info query_(int p, int L, int R) { return query_(p, 0, n, L, R); }
-    Info query_(int p, int l, int r, int L, int R) {
-        if (r <= L || R <= l) return {};
-        if (L <= l && r <= R) return info[p];
-        int m = (l + r) >> 1;
-        return query_(lson[p], l, m, L, R) + query_(rson[p], m, r, L, R);
+    Info query(int p, i64 i) { return query(p, i, i + 1); }
+    Info query(int p, i64 a, i64 b) { return query(p, L, R, a, b); }
+    Info query(int p, i64 l, i64 r, i64 a, i64 b) {
+        if (a <= l && r <= b) return info[p];
+        i64 m = l + (r - l) / 2;
+        dive(p, l, m, r);
+        if (b <= m) return query(lson[p], l, m, a, b);
+        if (m <= a) return query(rson[p], m, r, a, b);
+        return merge(query(lson[p], l, m, a, b), query(rson[p], m, r, a, b));
     }
 
 };
 
-void test() {
+// discrete -> {0, 1, 2, ...}
+template <class T, class Comp = std::less<T>>
+struct Disc {
+    std::vector<T> pool;
+    void clear() { pool.clear(); }
+    auto size() { return pool.size(); }
+    void insert(T const &x) { pool.push_back(x); }
+    void mapping() {
+        std::sort(pool.begin(), pool.end());
+        pool.erase(std::unique(pool.begin(), pool.end()), pool.end());
+    }
+    auto dec(int id) -> T { return pool[id]; }
+    auto enc(T const &x) -> int {
+        auto it = std::lower_bound(pool.begin(), pool.end(), x);
+        return it - pool.begin();
+    }
+};
 
-    int N, M, Q;
-    std::cin >> N >> M >> Q;
+void solve() {
 
-    struct Info {
-        i64 S;
-        Info() : S(0) {}
-        Info(i64 S) : S(S) {}
-        Info operator+(Info const &rhs) { return {S + rhs.S}; }
-    };
+    int n, q;
+    std::cin >> n >> q;
+    Disc<i64> disc;
+    std::vector<i64> a(n);
+    for (auto &x : a) std::cin >> x, disc.insert(x);
 
-    PSGT<Info> sgt;
-    sgt.build(std::vector<Info>(M), Q);
-    std::vector<int> line(N);
+    disc.mapping();
+    std::vector<int> b(n);
+    for (int i = 0; i < b.size(); i++) b[i] = disc.enc(a[i]);
 
-    while (Q--) {
-        int op;
-        std::cin >> op;
-        if (op == 1) {
-            int i, j;
-            std::cin >> i >> j; i--, j--;
-            line[i] = line[j];
-        } else if (op == 2) {
-            int i, k; i64 z;
-            std::cin >> i >> k >> z; i--, k--;
-            sgt.modify(line[i], k, z);
-            line[i] = sgt.latest();
-        } else if (op == 3) {
-            int i, l, r;
-            std::cin >> i >> l >> r; i--, l--, r--, r++;
-            std::cout << sgt.query(line[i], l, r).S << '\n';
-        }
+    std::vector<int> ver;
+    PstSegTree<int, std::plus<int>> sgt;
+    ver.push_back(sgt.build(0, disc.size()));
+    for (int v : b) ver.push_back(
+        sgt.modify(ver.back(), v, [&](int x){ return x + 1; }));
+
+    // v0 v1 v2 v3 ...
+    //    a0 a1 a2 ...
+    // [0, 2) -> v2 - v0
+    // k = cnt(x < bound)
+
+    while (q--) {
+        int l, r, k;
+        std::cin >> l >> r >> k;
+        int cnt = 0, bound = 0;
+        auto dfs = [&] (auto &self, int p, int q, int lo, int hi) -> bool {
+            int frq = sgt.info[q] - sgt.info[p];
+            if (cnt + frq <= k) { cnt += frq; return false; }
+            if (hi - lo == 1) { bound = lo; return true; }
+            i64 m = lo + (hi - lo) / 2;
+            sgt.dive(p, lo, m, hi), sgt.dive(q, lo, m, hi);
+            if (self(self, sgt.lson[p], sgt.lson[q], lo, m)) return true;
+            if (self(self, sgt.rson[p], sgt.rson[q], m, hi)) return true;
+            return false;
+        };
+        dfs(dfs, ver[l], ver[r], 0, disc.size());
+        std::cout << disc.dec(bound) << '\n';
     }
 
 }
