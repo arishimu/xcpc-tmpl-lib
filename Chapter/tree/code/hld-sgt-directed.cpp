@@ -1,4 +1,5 @@
-template <class Info, class Tag>
+template <class Info, class Tag, class Merge, class ApplyToInfo, class ApplyToTag,
+    class ReadyToApply = decltype([](Tag const &, Info const &){ return true; })>
 struct HLD {
 
     ...
@@ -7,15 +8,15 @@ struct HLD {
         Info r2u, r2v;
         while (top[u] != top[v]) {
             if (dep[top[u]] > dep[top[v]]) {
-                r2u = sgt.query(in[top[u]], in[u] + 1) + r2u;
+                r2u = sgt.merge(sgt.query(in[top[u]], in[u] + 1), r2u);
                 u = fa[top[u]];
             } else {
-                r2v = sgt.query(in[top[v]], in[v] + 1) + r2v;
+                r2v = sgt.merge(sgt.query(in[top[v]], in[v] + 1), r2v);
                 v = fa[top[v]];
             }
         }
-        if (dep[u] > dep[v]) r2u = sgt.query(in[v], in[u] + 1) + r2u;
-        else r2v = sgt.query(in[u], in[v] + 1) + r2v;
+        if (dep[u] > dep[v]) r2u = sgt.merge(sgt.query(in[v], in[u] + 1), r2u);
+        else r2v = sgt.merge(sgt.query(in[u], in[v] + 1), r2v);
         return {r2u.backw * r2v.forw, r2v.backw * r2u.forw};
     }
 
@@ -29,7 +30,8 @@ struct LinearFunc {
 struct DirectedInfo {
     LinearFunc f;
     DirectedInfo() : f(1, 0) {}
-    DirectedInfo operator*(DirectedInfo const &o) {
+    DirectedInfo(LinearFunc f) : f(f) {}
+    DirectedInfo operator*(DirectedInfo const &o) const {
         auto &[k1, b1] = f;
         auto &[k2, b2] = o.f;
         // f1 * f2 != f2 * f1
@@ -39,13 +41,9 @@ struct DirectedInfo {
 };
 
 struct Tag {...};
+struct Info { DirectedInfo forw, backw; };
 
-struct Info {
-    DirectedInfo forw, backw;
-
-    Info() : forw(), backw() {}
-    Info(DirectedInfo forw, DirectedInfo backw): forw(forw), backw(backw) {}
-    
-    void operator+=(Tag const &t) {...}
-    Info operator+(Info const &o) { return {l, o.r, forw * o.forw, o.backw * backw}; }
-};
+using Merge = decltype([](Info const &x, Info const &y) {
+    // 正向信息正向拼接，反向信息反向拼接
+    return Info{x.forw * y.forw, y.backw * x.backw};
+});

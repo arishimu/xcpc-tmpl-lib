@@ -35,13 +35,14 @@
 
 \subsection{重链剖分（线段树维护路径信息、子树信息）}
 
-使用线段树维护 dfn 区间．
+使用线段树维护 dfn 区间．线段树的 {\tt Info}、{\tt Tag} 和五个可调用对象都作为 {\tt HLD} 的模板参数传入；
+建树时直接给出 {\tt Init}，在 lambda 里用 {\tt seq[]} 把点权重排到 dfn 序．
 
 \lstinputlisting[caption={hld-sgt.cpp},label={hld-sgt},language=C++]{Chapter/tree/code/hld-sgt.cpp}
 
 如果要维护有向的 dfn 区间（比如点权的结合（如仿射函数的复合）不满足交换律），
 那么需要为 {\tt Info} 设计正反两向区间信息 {\tt Info::forw/backw}．
-合并 {\tt Info} 时，{\bf 正向信息正向拼接，反向信息反向拼接}．
+在 {\tt Merge} 中，{\bf 正向信息正向拼接，反向信息反向拼接}．
 
 \lstinputlisting[caption={hld-sgt-directed.cpp},label={hld-sgt-directed},language=C++]{Chapter/tree/code/hld-sgt-directed.cpp}
 

@@ -72,7 +72,7 @@ p_k = \prod_{k - \text{lowbit}(k) \le i < k} a_i, \quad
 1 \le k \le n
 $$
 每个 $p_k$ 管辖了在 $a_k$ 前面 $\text{lowbit}(k)$ 个元素．
-在实践中，为了方便建树，我们额外要求 $(A, *)$ 具备{\bf 幺元}，即幺半群．
+实践中，为了方便建树与查询，我们额外要求 $(A, *)$ 具备{\bf 幺元}，即幺半群，并把幺元记为 {\tt id}．
 
 前缀查询时，$S(k)$ 始终能被拆成 $O(\log k)$ 个 $p_i$ 之积，以达成 $O(\log n)$ 的查询复杂度，常数因子非常优秀．
 具体来说，$S(k)$ 能按照 $k$ 的二进制表示，被拆成 $\text{popcount}(k)$ 个 $p_i$ 之积．例如 $k = 22$ 的情形：
@@ -85,7 +85,22 @@ $$
 $$
 
 单点修改时，只需修改 $O(\log n)$ 个管辖范围包含 $a_i$ 的区间．
-修改区间从 $p_{i+1}$ 开始，能够证明 $p_k$ 的下一个管辖范围包含 $a_i$ 的区间是 $p_{k + \text{lowbit(k)}}$．
+修改区间从 $p_{i+1}$ 开始，能够证明 $p_k$ 的下一个管辖范围包含 $a_i$ 的区间是 $p_{k + \text{lowbit}(k)}$．
+
+实现上（下标均为 0-based）：
+
+\begin{enumerate}[noitemsep]
+    \item {\tt Fenwick(n, id)}：建出全幺元的空树；
+    \item {\tt Fenwick(v, id)}：以数组 {\tt v} 建树，时间复杂度 $O(n)$；
+    \item {\tt add(k, v)}：单点修改，$a_k \mapsto a_k * v$；
+    \item {\tt ask(k)}：前缀查询，返回 $S(k) = \prod_{0 \le i < k} a_i$．
+\end{enumerate}
+
+$p$ 数组以 {\tt info} 为名公开，{\tt info[i]} 对应 $p_i$，
+因此也可以不用 {\tt ask}，直接在树状数组上倍增：
+从高位到低位尝试把下标 {\tt cur} 调大，只要累积的前缀积仍不超过阈值就保留这一位．
+这样能在 $O(\log n)$ 内求出前缀积不超过阈值的最大下标，
+示例用它在离散化（{\tt Disc}）后的桶计数上查询全局第 $k$ 小．
 
 \lstinputlisting[caption={fenwick.cpp},label={fenwick},language=C++]{Chapter/data-structure/code/fenwick.cpp}
 
@@ -96,32 +111,46 @@ $$
 相比树状数组使用二进制结构维护区间片段以合成前缀区间，线段树直接二分区间直至区间长度为 $1$，因此可以实现任意的{\bf 区间查询}．
 如果只有{\bf 单点修改}的需求，可以不用实现懒标记．
 
-在实践中，为了方便合并子区间信息，我们额外要求 $(D, +)$ 还具备{\bf 幺元}，即幺半群．
+在实践中，为了方便合并子区间信息与初始化叶节点，我们额外要求 $(D, +)$ 还具备{\bf 幺元}，即幺半群．
+实现上不要求 {\tt Info} 自带成员函数，而是把 $+$ 与叶节点初始化写成编译期传入的可调用对象：
 
 \begin{enumerate}[noitemsep]
-    \item {\tt Info::Info()}：$D$ 的幺元；
-    \item {\tt Info::operator+(Info)}：$D$ 的运算 $+$．
+    \item {\tt Merge}：$D \times D \rightarrow D$，充当运算 $+$；
+    \item {\tt Init}：$l \mapsto D$，给出叶节点 $l$ 的初始信息，默认为幺元．
 \end{enumerate}
 
-使用时：
+下标与区间端点使用 {\tt i64}．使用时：
 
 \begin{enumerate}[noitemsep]
-    \item {\tt build} 要求在建树前完成对{\tt info}的初始化{\tt init}；
-    \item {\tt modify} 单点赋值：对{\tt info[i]}赋值；
-    \item {\tt query} 区间查询：对{\tt info[L, R)}信息汇总．
+    \item {\tt build(L, R, init)}：在区间 $[L, R)$ 上建树，{\tt init(l)} 给出叶节点 $l$ 的初始信息；
+    \item {\tt modify(i, f)}：单点修改，{\tt info[i] = f(info[i])}，{\tt f} 是 $D \rightarrow D$ 的函数对象；
+    \item {\tt query(i)}：单点查询；
+    \item {\tt query(a, b)}：区间查询，汇总 $[a, b)$ 的信息．
 \end{enumerate}
+
+{\tt modify} 传入的是函数而非新值：单点赋值写成常函数即可，
+而“在原值上累加”一类的修改可以直接表达，省去一次查询．
 
 \lstinputlisting[caption={sgt.cpp},label={sgt},language=C++]{Chapter/data-structure/code/sgt.cpp}
 
 \subsection{线段树（动态开点）}
 
-当区间分布跨度极广，但区间总长在可接受范围内时，可以用动态开点的方式代替直接在极广区间上建树．
+当区间分布跨度极广，但操作涉及的区间总长在可接受范围内时，可以用动态开点的方式代替直接在极广区间上建树．
 此时父子节点的编号关系已不存在，需要额外维护每个节点的{\tt lson}和{\tt rson}．
-每次从根出发向下查询，需要时刻{\tt push}探路，没路就新开节点{\tt node}．
+每次从根出发向下递归，先 {\tt dive} 探路：缺左儿子就新开 {\tt node(l, m)}，缺右儿子就新开 {\tt node(m, r)}．
 
-使用 {\tt i64} 表示区间端点．
 动态开点的线段树{\bf 与普通线段树使用方法完全一致}，能访问的下标得到极大扩展．
-使用前需给定全局最广区间{\tt [mini, maxi)}，但请注意：{\bf 越广的区间意味着越大的常数}．
+使用前需给定全局最广区间{\tt [L, R)}，但请注意：{\bf 越广的区间意味着越大的常数}．
+
+与普通线段树相比只有两点不同：
+
+\begin{enumerate}[noitemsep]
+    \item {\tt Init} 作用于任意节点，签名为 {\tt init(l, r)}，返回区间 $[l, r)$ 的初始信息；
+    \item {\tt build} 只创建根节点，其余节点在首次被访问时创建并初始化，
+        内部节点（如区间和）一次就能初始化到位，不必是幺元．
+\end{enumerate}
+
+示例用前缀和数组 {\tt p} 初始化内部节点：{\tt init(l, r) = p[r] - p[l]}．
 
 \lstinputlisting[caption={sgt-dynamic.cpp},label={sgt-dynamic},language=C++]{Chapter/data-structure/code/sgt-dynamic.cpp}
 
@@ -131,51 +160,66 @@ $$
 另外定义 $\cdot: T \times D \rightarrow D$，并且 $\cdot$ 对 $+$ 满足{\bf 分配律}，
 这种代数结构我们可以使用带懒标记的线段树来维护．为了方便合并子区间信息，我们额外要求 $(D, +)$ 还具备幺元，即幺半群．
 
-使用前需定义{\tt Info}和{\tt Tag}，包括：
+实现上把 $+$、$\cdot$、$*$、初始化都写成编译期传入的可调用对象，{\tt Info} 和 {\tt Tag} 只需是普通结构体：
 
 \begin{enumerate}[noitemsep]
-    \item {\tt Info::Info()}：$D$ 的幺元；
-    \item {\tt Info::operator+(Info)}：$D$ 的运算 $+$；
-    \item {\tt Info::operator+=(Tag)}：满足分配律的运算 $\cdot$；
-    \item {\tt Tag::Tag()}：$T$ 的幺元；
-    \item {\tt Tag::operator+=(Tag)}：$T$ 的运算 $*$．
+    \item {\tt Merge}：{\tt Info(Info, Info)}，即 $(D, +)$；
+    \item {\tt Init}：{\tt Info(i64)}，叶节点初始化，默认为幺元；
+    \item {\tt ApplyToInfo}：{\tt void(Tag, Info \&)}，原地施加 $\cdot$；
+    \item {\tt ApplyToTag}：{\tt void(Tag, Tag \&)}，原地复合 $*$；
+    \item {\tt ReadyToApply}：{\tt bool(Tag, Info)}，判断标记能否直接作用在整个节点上，默认为恒真．
 \end{enumerate}
 
-使用时：
+{\tt Tag} 的幺元在 {\tt build} 时一并传入（默认为 {\tt Tag\{\}}），用于 {\tt push} 清空标记．使用时：
 
 \begin{enumerate}[noitemsep]
-    \item {\tt build} 要求在建树前完成对{\tt info}的初始化{\tt init}；
-    \item {\tt modify} 单点赋值：对{\tt info[i]}赋值；
-    \item {\tt apply} 区间操作：对{\tt info[L, R)}施加操作{\tt t}；
-    \item {\tt query} 区间查询：对{\tt info[L, R)}信息汇总．
+    \item {\tt build(L, R, init, id)}：在区间 $[L, R)$ 上建树；
+    \item {\tt modify(i, t)}：单点施加标记 {\tt t}；
+    \item {\tt modify(a, b, t)}：区间施加标记 {\tt t}；
+    \item {\tt query(i)} / {\tt query(a, b)}：单点/区间查询．
 \end{enumerate}
+
+{\tt ReadyToApply} 服务于{\bf 势能线段树}（Segment Tree Beats）：
+若标记不能整体作用在节点上（例如区间取最值会破坏多个不同量级的最值），就返回假，
+让线段树继续递归到足够小的节点；默认恒真时退化为普通懒标记线段树．
+
+示例支持区间加、区间 {\tt chmax}、区间 {\tt chmin}、区间求和：
+{\tt Tag} 由 {\tt add}、{\tt chmax}、{\tt chmin} 组成，
+{\tt Info} 记录 {\tt len}、{\tt sum}，最大值 {\tt max1} 及其出现次数 {\tt cntx} 与次大值 {\tt max2}，
+最小值 {\tt min1} 及其出现次数 {\tt cntn} 与次小值 {\tt min2}；
+仅当 {\tt chmax} 落在最小值与次小值之间、{\tt chmin} 落在次大值与最大值之间时，
+才允许直接作用，此时只需改写最值及其出现次数．
 
 \lstinputlisting[caption={sgt-tag.cpp},label={sgt-tag},language=C++]{Chapter/data-structure/code/sgt-tag.cpp}
 
 \subsection{带懒标记的线段树（动态开点）}
 
 当区间分布跨度极广，但区间总长在可接受范围内时，可以用动态开点的方式代替直接在极广区间上建树．
-此时父子节点的编号关系已不存在，需要额外维护每个节点的{\tt lson}和{\tt rson}．
-每次从根出发向下查询，需要时刻{\tt push}探路，没路就新开节点{\tt node}．
+每次从根出发向下递归，先 {\tt dive} 探路开点；
+下放标记的 {\tt push} 多出区间参数，先把左右儿子开出来再 {\tt apply}．
 
-使用 {\tt i64} 表示区间端点．
-动态开点的线段树{\bf 与普通线段树使用方法完全一致}，能访问的下标得到极大扩展．
-使用前需给定全局最广区间{\tt [mini, maxi)}，但请注意：{\bf 越广的区间意味着越大的常数}．
+接口与上一节完全一致：{\tt build(L, R, init, id)}、{\tt modify(i, t)}、{\tt modify(a, b, t)}、{\tt query(i)}、{\tt query(a, b)}，
+只有 {\tt Init} 的签名变成 {\tt init(l, r)}，用于初始化任意节点（同动态开点的普通线段树）．
+使用前需给定全局最广区间 {\tt [L, R)}，但请注意：{\bf 越广的区间意味着越大的常数}．
+示例用仿射标记维护区间加、区间乘、区间赋值与区间求和．
 
 \lstinputlisting[caption={sgt-tag-dynamic.cpp},label={sgt-tag-dynamic},language=C++]{Chapter/data-structure/code/sgt-tag-dynamic.cpp}
 
 \subsection{可持久化线段树}
 
-仅支持{\bf 单点修改}，接口和前面可持久化并查集类似，支持手动控制版本保存：
+仅支持{\bf 单点修改}．与可持久化并查集不同，这里不维护版本号，
+而是让 {\tt modify} 直接返回新根，由使用者决定保存哪些根作为版本：
 
 \begin{enumerate}[noitemsep]
-    \item {\tt build()}：初始化第 $0$ 个版本，$m$ 是对最大版本数的估计；
-    \item {\tt latest()/latest\_()}：返回最近版本号/根节点；
-    \item {\tt save()/save\_()}：传入版本号/根节点，拷贝该版本作为新版本；
-    \item {\tt modify()/modify\_()}：传入版本号/根节点，单点修改，{\bf 自动保存版本}；
-    \item {\tt modified()/modified\_()}：传入版本号/根节点，单点修改，{\bf 不保存版本}，返回新根以供用户自由处理；
-    \item {\tt query()/query\_()}：传入版本号/根节点，区间查询，不产生版本．
+    \item {\tt build(L, R, init)}：建出初始树并返回根，{\tt init(l, r)} 给出节点 $[l, r)$ 的初始信息；
+    \item {\tt modify(p, i, f)}：以根 {\tt p} 为版本，单点修改 {\tt info[i] = f(info[i])}，{\bf 返回新根}，旧版本不受影响；
+    \item {\tt query(p, i)} / {\tt query(p, a, b)}：在根 {\tt p} 上单点/区间查询．
 \end{enumerate}
+
+{\tt modify} 会克隆根到叶的整条路径，产生 $O(\log n)$ 个新节点；
+{\tt dive} 在访问到不存在的儿子时补建节点，因此对任意历史版本做 {\tt query} 也是安全的．
+示例是主席树：对离散化后的权值建可持久化权值线段树，
+第 $i$ 个版本对应前 $i$ 个元素，区间 $[l, r)$ 的第 $k$ 小由两个前缀版本作差后在树上二分得到．
 
 \lstinputlisting[caption={p-sgt.cpp},label={p-sgt},language=C++]{Chapter/data-structure/code/p-sgt.cpp}
 

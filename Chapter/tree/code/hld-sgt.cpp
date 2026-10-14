@@ -1,47 +1,38 @@
-template <class Info, class Tag>
+template <class Info, class Tag, class Merge, class ApplyToInfo, class ApplyToTag,
+    class ReadyToApply = decltype([](Tag const &, Info const &){ return true; })>
 struct HLD {
 
     ...
 
-    SGT<Info, Tag> sgt;
-
+    SegTree<Info, Tag, Merge, ApplyToInfo, ApplyToTag, ReadyToApply> sgt;
     HLD(int n) ... {}
     void add_edge(int u, int v) {...}
-
     void build(int root) {...}
-    void build_sgt(std::vector<Info> const &init) {
-        std::vector<Info> init_(n);
-        for (int i = 0; i < n; i++) init_[in[i]] = init[i];
-        sgt.build(init_);
-    }
-
     void dfs1(int u) {...}
     void dfs2(int u) {...}
-
-    void modify(int u, const Info &v) { sgt.modify(in[u], v); }
-
-    void subtree_apply(int u, const Tag &t) { sgt.apply(in[u], out[u], t); }
+    void modify(int u, const Tag &t) { sgt.modify(in[u], t); }
+    void subtree_apply(int u, const Tag &t) { sgt.modify(in[u], out[u], t); }
     Info subtree_query(int u) { return sgt.query(in[u], out[u]); }
 
     void path_apply(int u, int v, const Tag &t) {
         while (top[u] != top[v]) {
             if (dep[top[u]] < dep[top[v]]) std::swap(u, v);
-            sgt.apply(in[top[u]], in[u] + 1, t);
+            sgt.modify(in[top[u]], in[u] + 1, t);
             u = fa[top[u]];
         }
         if (dep[u] > dep[v]) std::swap(u, v);
-        sgt.apply(in[u], in[v] + 1, t);
+        sgt.modify(in[u], in[v] + 1, t);
     }
 
     Info undirected_path_query(int u, int v) {
-        Info u2v;
+        Info u2v{};
         while (top[u] != top[v]) {
             if (dep[top[u]] < dep[top[v]]) std::swap(u, v);
-            u2v = u2v + sgt.query(in[top[u]], in[u] + 1);
+            u2v = sgt.merge(u2v, sgt.query(in[top[u]], in[u] + 1));
             u = fa[top[u]];
         }
         if (dep[u] > dep[v]) std::swap(u, v);
-        return u2v + sgt.query(in[u], in[v] + 1);
+        return sgt.merge(u2v, sgt.query(in[u], in[v] + 1));
     }
 
 };
@@ -53,31 +44,29 @@ void test() {
     std::vector<i64> a(N);
     for (auto &x : a) std::cin >> x;
 
-    struct Tag {
-        Z z;
-        Tag() : z(0) {}
-        Tag(Z z) : z(z) {}
-        void operator+=(Tag const &t) { z += t.z; }
-    };
+    struct Tag { Z z = 0; };
+    struct Info { int l, r; Z sum; };
 
-    struct Info {
-        int l, r; Z S;
-        Info() : l(0), r(0), S(0) {}
-        Info(int l, int r, Z S) : l(l), r(r), S(S) {}
-        void operator+=(Tag const &t) { S += (r - l) * t.z; }
-        Info operator+(Info const &o) { return {l, o.r, S + o.S}; }
-    };
-
-    HLD<Info, Tag> hld(N); // step 0: num of nodes
+    HLD<Info, Tag, decltype([](Info const &x, Info const &y) {
+        return Info{x.l, y.r, x.sum + y.sum};
+    }), decltype([](Tag const &t, Info &x) {
+        x.sum += (x.r - x.l) * t.z;
+    }), decltype([](Tag const &t, Tag &x) {
+        x.z += t.z;
+    })> hld(N); // step 0: num of nodes
     for (int i = 0; i < N - 1; i++) {
         int u, v;
         std::cin >> u >> v; u--; v--;
         hld.add_edge(u, v); // step 1: add edges
     }
     hld.build(R); // step 2: dfs twice
-    std::vector<Info> init(N);
-    for (int i = 0; i < N; i++) init[i] = {hld.in[i], hld.in[i] + 1, a[i]}; // in[] !!!
-    hld.build_sgt(init); // step 3: init info, build sgt
+    hld.sgt.build(0, N, [&](i64 i) { // step 3: init info, build sgt
+        int u = hld.seq[i];
+        return Info {
+            .l = hld.in[u], .r = hld.in[u] + 1,
+            .sum = a[u],
+        }; // in[] !!!
+    });
 
     while (M--) {
         int op;
@@ -98,6 +87,10 @@ void test() {
             int x;
             std::cin >> x; x--;
             std::cout << hld.subtree_query(x).S.val() << '\n';
+        } else if (op == 5) {
+            int x; i64 z;
+            std::cin >> x >> z; x--;
+            hld.modify(x, {z});
         }
     }
 

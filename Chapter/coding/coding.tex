@@ -3,7 +3,7 @@
 \subsection{代码风格}
 
 \begin{enumerate}[itemsep=2pt, topsep=0pt, parsep=0pt]
-    \item 使用 {\bf C++17} 标准，无法使用{\tt <bit>}、{\tt <print>}、{\tt this auto}、{\tt Concept}、内部类对象返回、自定义类对象作为非类型模板参数；
+    \item 使用 {\bf C++20} 标准，可以善用 lambda 作为模板实参、指定初始化等特性，无法使用 {\tt this auto}、{\tt <print>} 等 C++23 特性；
     \item 默认使用 {\bf 0-based 下标}，视情况使用 1-based 下标；
     \item 涉及区间划分时，使用{\bf 左闭右开}区间；
     \item 大括号采用 K\&R 风格；

@@ -71,7 +71,7 @@ void solve() {
         std::cin >> k; // 0-based k-min
         int acc = 0, cur = 0, w = 31 - __builtin_clz(cnt.size());
         for (int p = 1 << w; p; p >>= 1) {
-            if ((cur | p) > n) continue;
+            if ((cur | p) > disc.size() - 1) continue;
             int t = acc + fwk.info[cur | p];
             if (t > k) continue;
             acc = t, cur |= p;
